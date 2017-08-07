@@ -51,29 +51,6 @@ def detect_cascade(image_gray, cascadeClassifier,
     detected = cascadeClassifier.detectMultiScale(image_gray, scaleFactor, minNeighbors)
     return detected
 
-def drawRects(image_BGR, objList, color_BGR=(0,0,255), thickness=3):
-    '''
-    Draws rectangles for all objects
-
-    Given list of coordinates (x,y,w,h) in objList, draws rectangles with
-    vertices (x,y), (x+w,y), (x,y+h), (x+w,y+h).
-
-    Args:
-        image_BGR: 3-dimensional numpy.ndarray (BGR is OpenCV's default)
-        objList: list of (x,y,w,h) for all objects to draw
-        color_BGR (optional, default (0,0,255): BGR color, tuple of 3 uint8
-                                            (i.e. (0,0,255) is red)
-        thickness (optional, default 3): pixel thickness for lines
-
-    Returns:
-        image_with_rects: 3-dimensional numpy.ndarray (BGR)
-                with all the rectangles drawn in
-    '''
-    image_with_rects = np.copy(image_BGR)
-    for x, y, w, h in objList:
-        cv2.rectangle(image_with_rects, (x,y), (x+w,y+h), color_BGR, thickness)
-    return image_with_rects
-
 def detect_facial_features(image_gray, faces, model):
     '''
     Args:
@@ -136,3 +113,62 @@ def extent_sunglasses(face, facialFeatures):
     ymax = np.int(nose_y)
 
     return (xmax, xmin, ymax, ymin)
+
+def drawRects(image_BGR, objList, color_BGR=(0,0,255), thickness=3):
+    '''
+    Draws rectangles for all objects
+
+    Given list of coordinates (x,y,w,h) in objList, draws rectangles with
+    vertices (x,y), (x+w,y), (x,y+h), (x+w,y+h).
+
+    Args:
+        image_BGR: 3-dimensional numpy.ndarray (BGR is OpenCV's default)
+        objList: list of (x,y,w,h) for all objects to draw
+        color_BGR (optional, default (0,0,255): BGR color, tuple of 3 uint8
+                                            (i.e. (0,0,255) is red)
+        thickness (optional, default 3): pixel thickness for lines
+
+    Returns:
+        image_with_rects: 3-dimensional numpy.ndarray (BGR)
+                with all the rectangles drawn in
+    '''
+    image_with_rects = np.copy(image_BGR)
+    for x, y, w, h in objList:
+        cv2.rectangle(image_with_rects, (x,y), (x+w,y+h), color_BGR, thickness)
+    return image_with_rects
+
+def plot_features(image_ndarray, coords, color_BGR=[0,255,0], thickness=2):
+    '''
+    Draws a dot for all coords
+
+    Given list of coordinates (x,y) in coords, draws circles with
+    center (x,y) and radius = (thickness+1)//2.
+
+    Args:
+        image_ndarray: numpy.ndarray (grayscale or BGR)
+        coords: list of (x,y) for all facial features to draw
+        color_BGR (optional, default (0,255,0): BGR color, tuple of 3 uint8
+                                            (i.e. (0,0,255) is red)
+        thickness (optional, default 3): pixel thickness for lines
+
+    Returns:
+        image_with_rects: 3-dimensional numpy.ndarray (BGR)
+                with all the rectangles drawn in
+    '''
+    image = np.copy(image_ndarray)
+    w,h = image.shape[:2]
+    if len(image.shape) == 2:
+        image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+    elif len(image.shape) == 3:
+        if image.shape[2] == 1:
+            image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+    elif image.shape[2] == 3:
+        pass
+    else:
+        raise TypeError("Input must be either a grayscale or BGR image")
+    #undo normalization
+    x_features, y_features = coords[0::2]*w/2+w/2, coords[1::2]*h/2+h/2
+
+    for coord in zip(x_features,y_features):
+        cv2.circle(image, coord, (thickness+1)//2, color_BGR, thickness)
+    return image
