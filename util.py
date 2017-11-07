@@ -78,19 +78,33 @@ def add_sunglasses(image_BGR, faces, list_facialFeatures, sg_image='images/sungl
                 (4-channel, where 4th dim is opacity)
     '''
     image_sg = np.copy(image_BGR)
-    sunglasses = cv2.imread(sg_image, cv2.IMREAD_UNCHANGED)
-    #mask = sunglasses[:,:,[3,3,3]]/255
-    #mask_inv = 1-mask
-    #sunglasses = sunglasses[:,:,:3]
+    sunglasses = cv2.imread(sg_image, cv2.IMREAD_UNCHANGED)/255.
 
     for face, facialFeatures in zip(faces,list_facialFeatures):
-        (xmax, xmin, ymax, ymin) = extent_sunglasses(face, facialFeatures)
-        sg = cv2.resize(sunglasses, (xmax-xmin,ymax-ymin))
-        mask = sg[:,:,[3,3,3]]/255
-        mask_inv = 1-mask
-        image_sg[ymin:ymax,xmin:xmax] = np.multiply(sg[:,:,:3],mask) + \
-                    np.multiply(image_sg[ymin:ymax,xmin:xmax],mask_inv)
+        x, y, w, h = face
+        transform = get_sunglasses_transform(face, facialFeatures)
+        sg = cv2.warpAffine(sunglasses, transform, (w,h))
+        mask = sg[:,:,[3,3,3]]
+        image_sg[y:y+h,x:x+w] = np.multiply(sg[:,:,:3],mask) + \
+                    np.multiply(image_sg[y:y+h,x:x+w],1-mask)
+        # (xmax, xmin, ymax, ymin) = extent_sunglasses(face, facialFeatures)
+        # sg = cv2.resize(sunglasses, (xmax-xmin,ymax-ymin))
+        # mask = sg[:,:,[3,3,3]]
+        # image_sg[ymin:ymax,xmin:xmax] = np.multiply(sg[:,:,:3],mask) + \
+        #             np.multiply(image_sg[ymin:ymax,xmin:xmax],mask_inv)
     return image_sg
+
+def get_sunglasses_transform(face, facialFeatures):
+    '''
+    Returns the affine transformation matrix for the sunglasses image
+    '''
+    left_eye = (facialFeatures[6:8] + 1.0) * face[2:] / 2.0
+    right_eye = (facialFeatures[10:12] + 1.0) * face[2:] / 2.0
+    nose = (facialFeatures[20:22] + 1.0) * face[2:] / 2.0
+
+    src = np.float32([[37, 30], [147, 30], [92, 65]])
+    dst = np.float32([left_eye, right_eye, nose])
+    return cv2.getAffineTransform(src,dst)
 
 def extent_sunglasses(face, facialFeatures):
     '''
